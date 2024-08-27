@@ -77,9 +77,9 @@ const Home = () => {
               <Image
                 src={recipe.image}
                 alt={recipe.title}
-                layout="fill"
-                objectFit="cover"
-                className="absolute inset-0 opacity-20"
+                fill
+                style={{ objectFit: 'cover', opacity: 0.2 }}
+                className="absolute inset-0"
               />
               <div className="relative z-10">
                 <div className="flex items-center space-x-4 mb-4">

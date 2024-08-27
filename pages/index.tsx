@@ -1,5 +1,3 @@
-// pages/index.tsx
-
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { motion } from 'framer-motion';
@@ -9,58 +7,76 @@ const AuthPage = () => {
   const [isLogin, setIsLogin] = useState(true);
   const router = useRouter();
 
-  // Fare hareketini takip eden kahve çekirdekleri için koordinat state'leri
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [beansPositions, setBeansPositions] = useState(
-    Array.from({ length: 12 }).map(() => ({ x: 0, y: 0 }))
+    Array.from({ length: 10 }).map(() => ({ x: 0, y: 0 }))
   );
 
-  // Fare hareketini takip et
   useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      setMousePosition({ x: e.clientX, y: e.clientY });
-    };
+    if (typeof window !== 'undefined') {
+      const initialMousePosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+      setMousePosition(initialMousePosition);
+      setBeansPositions(
+        Array.from({ length: 10 }).map((_, index) => ({
+          x: initialMousePosition.x + index * 15,
+          y: initialMousePosition.y + index * 15,
+        }))
+      );
 
-    document.addEventListener('mousemove', handleMouseMove);
+      const handleMouseMove = (e: MouseEvent) => {
+        setMousePosition({ x: e.clientX, y: e.clientY });
+      };
 
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-    };
+      document.addEventListener('mousemove', handleMouseMove);
+
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+      };
+    }
   }, []);
 
-  // Kahve çekirdeklerinin fare imlecini takip etmesi
+  const isCaught = (position: { x: number; y: number }, target: { x: number; y: number }) => {
+    const distance = Math.sqrt(
+      (target.x - position.x) * (target.x - position.x) +
+      (target.y - position.y) * (target.y - position.y)
+    );
+    return distance < 2;
+  };
+
   useEffect(() => {
-    const interval = setInterval(() => {
+    const animateBeans = () => {
       setBeansPositions((prevPositions) => {
-        const newPositions = prevPositions.map((position, index) => {
+        return prevPositions.map((position, index) => {
           const target = index === 0 ? mousePosition : prevPositions[index - 1];
-          const dx = target.x - position.x;
-          const dy = target.y - position.y;
-          const distance = Math.sqrt(dx * dx + dy * dy);
-          const speed = Math.min(distance / 5, 10);
+          if (!isCaught(position, target)) {
+            const dx = target.x - position.x;
+            const dy = target.y - position.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            const speed = Math.min(distance / 20, 10);
 
-          return {
-            x: position.x + (dx / distance) * speed,
-            y: position.y + (dy / distance) * speed,
-          };
+            return {
+              x: position.x + (dx / distance) * speed,
+              y: position.y + (dy / distance) * speed,
+            };
+          }
+          return position;
         });
-
-        return newPositions;
       });
-    }, 20);
 
-    return () => clearInterval(interval);
-  }, [mousePosition]);
+      requestAnimationFrame(animateBeans);
+    };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    router.push('/home');
+    animateBeans();
+  }, [beansPositions, mousePosition]);
+
+  const handleNavigate = () => {
+    router.replace('/home');  // Home sayfasına anında geçiş yapılmasını sağlar
   };
 
   const pageVariants = {
-    initial: { opacity: 0, scale: 0.8 },
-    in: { opacity: 1, scale: 1 },
-    out: { opacity: 0, scale: 0.8 },
+    initial: { opacity: 0, x: 50 },
+    in: { opacity: 1, x: 0 },
+    out: { opacity: 0, x: -50 },
   };
 
   const pageTransition = {
@@ -70,22 +86,26 @@ const AuthPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-cover bg-center relative" style={{ backgroundImage: "url('/images/coffee-bg.jpg')" }}>
+    <div
+      className="min-h-screen bg-cover bg-center relative"
+      style={{
+        backgroundImage: "url('/images/coffee-bg.jpg')",
+        cursor: "url('/images/coffee-cup.png'), auto",
+      }}
+    >
       <div className="bg-black bg-opacity-50 min-h-screen flex items-center justify-center relative overflow-hidden">
-        {/* Kahve çekirdekleri */}
         {beansPositions.map((position, index) => (
           <motion.div
             key={index}
-            className="absolute w-6 h-6"
+            className="absolute"
             style={{
-              left: position.x - 12,
-              top: position.y - 12,
+              left: position.x - 25,
+              top: position.y - 25,
             }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: index * 0.1 }}
           >
-            <Image src="/images/coffee-beans.png" alt="Coffee Bean" width={24} height={24} />
+            <Image src="/images/coffee-beans.png" alt="Coffee Bean" width={35} height={35} />
           </motion.div>
         ))}
 
@@ -103,7 +123,7 @@ const AuthPage = () => {
           <h2 className="text-3xl font-extrabold text-center text-gray-800">
             {isLogin ? 'Welcome Back!' : 'Join Us Today!'}
           </h2>
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={(e) => { e.preventDefault(); handleNavigate(); }} className="space-y-6">
             {!isLogin && (
               <div>
                 <label className="block text-sm font-medium text-gray-700">Full Name</label>
